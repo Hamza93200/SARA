@@ -2,5 +2,5 @@ streamlit==1.22.0
 pandas==2.0.1
 matplotlib==3.7.1
 openpyxl==3.1.2
-statsmodels==0.14.0
-scipy==1.11.0
+scipy==1.10.1  # Downgraded to avoid build issues
+statsmodels==0.13.5  # Older ve
