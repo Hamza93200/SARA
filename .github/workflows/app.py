@@ -10,8 +10,8 @@ page = st.sidebar.radio("Go to", ["Home/Overview", "Rate Cut Impact", "Recession
 # File uploader outside the cached function to avoid the error
 file = st.sidebar.file_uploader("Upload your Excel file", type=["xlsx", "xls"])
 
-# Function to load the data, cached for performance (without widgets inside it)
-@st.cache
+# Function to load the data
+@st.cache_data  # Updated from @st.cache to @st.cache_data to align with recent Streamlit versions
 def load_data(file):
     if file is not None:
         data = pd.read_excel(file)
