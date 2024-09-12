@@ -1,2 +1,133 @@
-streamlit==1.22.0
-matplotlib==3.7.1
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+class DataApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Financial Data Analysis")
+        self.root.geometry("400x300")
+
+        # Add buttons for various features
+        self.load_button = tk.Button(root, text="Load Excel File", command=self.load_file)
+        self.load_button.pack(pady=10)
+
+        self.page_selection = tk.StringVar()
+        self.page_selection.set("Home/Overview")
+
+        self.pages = ["Home/Overview", "Rate Cut Impact", "Recession Analysis", "Custom Analysis", "Long/Short Strategy"]
+        self.dropdown = tk.OptionMenu(root, self.page_selection, *self.pages, command=self.navigate_page)
+        self.dropdown.pack(pady=10)
+
+        self.data = None  # Variable to hold the loaded data
+
+    def load_file(self):
+        file_path = filedialog.askopenfilename(title="Select Excel File", filetypes=[("Excel Files", "*.xlsx *.xls")])
+        if file_path:
+            try:
+                self.data = pd.read_excel(file_path)
+                messagebox.showinfo("Success", "File loaded successfully!")
+                self.navigate_page(self.page_selection.get())  # Refresh the page after loading file
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load file: {e}")
+
+    def navigate_page(self, page):
+        if not self.data:
+            messagebox.showwarning("Warning", "Please load the data first.")
+            return
+
+        if page == "Home/Overview":
+            self.display_overview()
+        elif page == "Rate Cut Impact":
+            self.display_rate_cut_impact()
+        elif page == "Recession Analysis":
+            self.display_recession_analysis()
+        elif page == "Custom Analysis":
+            self.display_custom_analysis()
+        elif page == "Long/Short Strategy":
+            self.display_long_short_strategy()
+
+    def display_overview(self):
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.data['Date'], self.data['Fed Rate'], label="Fed Rate")
+        plt.plot(self.data['Date'], self.data['S&P 500'], label="S&P 500")
+        plt.legend()
+        plt.title("Overview")
+        plt.xlabel("Date")
+        plt.ylabel("Value")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def display_rate_cut_impact(self):
+        fed_rate_threshold = 5.0  # Example threshold for rate cut
+        rate_cut_data = self.data[self.data['Fed Rate'] <= fed_rate_threshold]
+        indices_selected = self.data.columns[3:]  # Selecting indices
+
+        plt.figure(figsize=(10, 5))
+        for index in indices_selected:
+            plt.plot(rate_cut_data['Date'], rate_cut_data[index], label=index)
+        plt.legend()
+        plt.title("Rate Cut Impact on Indices")
+        plt.xlabel("Date")
+        plt.ylabel("Value")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def display_recession_analysis(self):
+        self.data['S&P Return'] = self.data['S&P 500'].pct_change()
+        recession_data = self.data[self.data['S&P Return'] < 0]
+        indices_selected = self.data.columns[3:]
+
+        plt.figure(figsize=(10, 5))
+        for index in indices_selected:
+            plt.plot(recession_data['Date'], recession_data[index], label=index)
+        plt.legend()
+        plt.title("Recession Analysis")
+        plt.xlabel("Date")
+        plt.ylabel("Value")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def display_custom_analysis(self):
+        indices_selected = self.data.columns[3:]  # Assuming custom analysis includes selecting all indices
+        correlation_matrix = self.data[indices_selected].corr()
+
+        plt.figure(figsize=(8, 6))
+        plt.imshow(correlation_matrix, cmap='coolwarm', interpolation='none')
+        plt.colorbar()
+        plt.title("Correlation Matrix")
+        plt.xticks(range(len(indices_selected)), indices_selected, rotation=90)
+        plt.yticks(range(len(indices_selected)), indices_selected)
+        plt.tight_layout()
+        plt.show()
+
+    def display_long_short_strategy(self):
+        indices_selected = self.data.columns[3:]
+        returns_data = self.data[indices_selected].pct_change()
+
+        top_percentile = returns_data.quantile(0.8)
+        bottom_percentile = returns_data.quantile(0.2)
+
+        long_indices = returns_data.columns[(returns_data > top_percentile).mean() > 0.5]
+        short_indices = returns_data.columns[(returns_data < bottom_percentile).mean() > 0.5]
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(returns_data[long_indices].mean(axis=1), label="Long Indices (Top 20%)", color="green")
+        plt.plot(returns_data[short_indices].mean(axis=1), label="Short Indices (Bottom 20%)", color="red")
+        plt.legend()
+        plt.title("Long/Short Strategy")
+        plt.xlabel("Date")
+        plt.ylabel("Average Return")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DataApp(root)
+    root.mainloop()
