@@ -98,8 +98,7 @@ if data is not None:
 
 else:
     st.write("Please upload your Excel file to proceed.")
-
-from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller
 from scipy.stats import ttest_ind
@@ -124,16 +123,17 @@ if page == "Comprehensive Analysis":
     best_index_corr = correlation_matrix.idxmin()  # Find index with the lowest negative correlation
     st.write(f"Best performing index based on correlation: {best_index_corr}")
     
-    # Perform Linear Regression to assess impact of Fed Rate on Indices
+    # Perform Linear Regression using statsmodels
     st.subheader("Regression Analysis")
-    X = rate_cut_data['Fed Rate'].values.reshape(-1, 1)  # Fed Rate as independent variable
     regression_results = {}
     
     for index in indices_selected:
-        y = returns_data[index].values.reshape(-1, 1)
-        reg = LinearRegression().fit(X, y)
-        regression_results[index] = reg.coef_[0][0]  # Store the slope (effect of Fed rate on the index)
-    
+        y = returns_data[index].dropna()  # Dependent variable (index returns)
+        X = rate_cut_data['Fed Rate'].loc[y.index]  # Independent variable (Fed Rate)
+        X = sm.add_constant(X)  # Adds a constant term to the model (intercept)
+        model = sm.OLS(y, X).fit()  # Fit the regression model
+        regression_results[index] = model.params['Fed Rate']  # Store the coefficient of the Fed Rate
+
     regression_df = pd.DataFrame(regression_results, index=['Coefficient']).T
     st.write("Regression Coefficients (Effect of Fed Rate on Indices):")
     st.write(regression_df)
@@ -187,5 +187,3 @@ if page == "Comprehensive Analysis":
     combined_scores = correlation_matrix.rank() + regression_df['Coefficient'].rank() + t_test_df['P-Value'].rank()
     best_overall_index = combined_scores.idxmin()  # Index with the lowest combined rank
     st.write(f"The overall best performing index after a rate cut is: {best_overall_index}")
-
-
